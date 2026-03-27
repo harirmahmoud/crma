@@ -129,6 +129,65 @@ class CasController extends Controller
         }
     }
 
+    private function checkStatusMaxAndPlafond($validatedData)
+    {
+        $franchise = Franchise::where('franchise_id', $validatedData['franchise_id'])->first();
+        if (!$franchise || !$franchise->condition_id) {
+            return ['statusmax' => true, 'statusplafond' => true];
+        }
+
+        $condition = Condition::where('id', $franchise->condition_id)->first();
+        $condBeneficiaire = CondBeneficiare::where('beneficiare_id', $validatedData['beneficiare_id'])
+            ->where('condition_id', $franchise->condition_id)
+            ->first();
+
+        $statusmax = true;
+        $statusplafond = true;
+        
+        $now = now()->format('m-Y');
+        $accumulatedMax = 0;
+        $accumulatedPlafond = 0;
+
+        if ($condBeneficiaire && $condition) {
+            $cond = $condBeneficiaire->condition;
+            if (!isset($cond['date'])) $cond['date'] = $now;
+            
+            [$monthnow, $yearnow] = explode('-', $now);
+            $dateParts = explode('-', $cond['date']);
+            $month = $dateParts[0] ?? $monthnow;
+            $year = $dateParts[1] ?? $yearnow;
+            
+            $dure = $condition->condition['dure'] ?? '';
+            if (($dure == "anne" && $year != $yearnow) || ($dure == "mois" && $month != $monthnow)) {
+                // reset counters if period has passed
+                $accumulatedMax = 0;
+                $accumulatedPlafond = 0;
+            } else {
+                $accumulatedMax = $cond['max'] ?? 0;
+                $accumulatedPlafond = $cond['plafond'] ?? 0;
+            }
+        }
+
+        // Check max
+        if ($condition && isset($condition->condition['max'])) {
+            if ($accumulatedMax + 1 > $condition->condition['max']) {
+                $statusmax = false;
+            }
+        }
+
+        // Check plafond
+        if ($condition && isset($condition->condition['plafond'])) {
+            if ($accumulatedPlafond + $validatedData['frais_engage'] > $condition->condition['plafond']) {
+                $statusplafond = false;
+            }
+        }
+
+        return [
+            'statusmax' => $statusmax,
+            'statusplafond' => $statusplafond
+        ];
+    }
+
     public function create(Request $request)
     {
         $validatedData = $request->validate([
@@ -140,11 +199,30 @@ class CasController extends Controller
             'frais_engage' => 'required|numeric',
             'franchise_id' => 'required|string',
             'piece_id' => 'required|string',
+            'force_create' => 'sometimes|boolean',
         ]);
+
+        $check = $this->checkStatusMaxAndPlafond($validatedData);
+        $forceCreate = $request->input('force_create', false);
+
+        if (!$forceCreate) {
+            if (!$check['statusmax']) {
+                return response()->json([
+                    'message' => 'Le nombre maximum de cas a été atteint pour cette condition.',
+                    'requires_force' => true
+                ], 400);
+            }
+            if (!$check['statusplafond']) {
+                return response()->json([
+                    'message' => 'Le plafond de frais a été dépassé pour cette condition.',
+                    'requires_force' => true
+                ], 400);
+            }
+        }
 
         $calculated = $this->calculateTotalAndHandleCondition($validatedData);
 
-        $casData = $validatedData;
+        $casData = collect($validatedData)->except('force_create')->toArray();
         $casData['total'] = $calculated['total'];
         $casData['status'] = $calculated['statusmax'] && $calculated['statusplafond'];
 
@@ -164,6 +242,7 @@ class CasController extends Controller
             'frais_engage' => 'sometimes|numeric',
             'franchise_id' => 'sometimes|string',
             'piece_id' => 'sometimes|string',
+            'force_create' => 'sometimes|boolean',
         ]);
 
         $casId = $validatedData['id'] ?? $request->id;
@@ -173,12 +252,34 @@ class CasController extends Controller
             return response()->json(['message' => 'Cas not found'], 404);
         }
 
-        // Reverse old effect
+        // Validate max and plafond before update (treating as new entry temporarily)
+        $newDataForCheck = array_merge($cas->toArray(), $validatedData);
+        
+        // Temporarily reverse to check if new data fits
         $this->reverseCondition($cas);
 
-        // Update with new data to calculate new totals
-        $newData = array_merge($cas->toArray(), $validatedData);
-        $calculated = $this->calculateTotalAndHandleCondition($newData);
+        $check = $this->checkStatusMaxAndPlafond($newDataForCheck);
+        $forceCreate = $request->input('force_create', false);
+
+        if (!$forceCreate && (!$check['statusmax'] || !$check['statusplafond'])) {
+            // Re-apply original since we reversed
+            $calculated = $this->calculateTotalAndHandleCondition($cas->toArray());
+            
+            if (!$check['statusmax']) {
+                return response()->json([
+                    'message' => 'Le nombre maximum de cas a été atteint.',
+                    'requires_force' => true
+                ], 400);
+            }
+            if (!$check['statusplafond']) {
+                return response()->json([
+                    'message' => 'Le plafond de frais a été dépassé.',
+                    'requires_force' => true
+                ], 400);
+            }
+        }
+
+        $calculated = $this->calculateTotalAndHandleCondition($newDataForCheck);
 
         $validatedData['total'] = $calculated['total'];
         $validatedData['status'] = $calculated['statusmax'] && $calculated['statusplafond'];
@@ -204,13 +305,13 @@ class CasController extends Controller
     }
 
     public function getCas(Request $request){
-    $perPage = $request->get('per_page', 10);
-    $query   = $request->get('q');
-    $cas = Cas::query()
-        ->when($query, function ($q) use ($query) {
-            $q->where('num_quitance', 'like', "%{$query}%");
-        })
-        ->paginate($perPage);
+        $perPage = $request->get('per_page', 10);
+        $query   = $request->get('q');
+        $cas = Cas::query()
+            ->when($query, function ($q) use ($query) {
+                $q->where('num_quitance', 'like', "%{$query}%");
+            })
+            ->paginate($perPage);
         return response()->json(['cas' => $cas], 200);
     }
 }

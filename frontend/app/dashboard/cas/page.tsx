@@ -292,8 +292,8 @@ export default function CasPage() {
         catch (e) { console.error("Failed to delete cas", e) }
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    const handleSubmit = async (e?: React.FormEvent, forceCreate = false) => {
+        if (e) e.preventDefault()
         if (!assureId) { alert("Veuillez sélectionner un assuré."); return }
         if (!beneficiaireId) { alert("Veuillez sélectionner un bénéficiaire."); return }
         if (!franchiseId) { alert("Veuillez sélectionner une franchise."); return }
@@ -304,12 +304,23 @@ export default function CasPage() {
             assure_id: assureId, beneficiare_id: beneficiaireId,
             franchise_id: franchiseId, piece_id: pieceId,
             frais_engage: parseFloat(fraisEngage),
+            force_create: forceCreate
         }
         try {
             if (editingItem) await axiosInstance.put(`/cas/${editingItem.id ?? editingItem.num_quitance}`, payload)
             else await axiosInstance.post("/cas", payload)
             setIsDialogOpen(false); fetchData()
-        } catch (e) { console.error("Failed to save cas", e) }
+        } catch (err: any) {
+            console.error("Failed to save cas", err)
+            const data = err.response?.data
+            if (data?.requires_force) {
+                if (window.confirm(`${data.message}\n\nVoulez-vous quand même continuer et forcer la création/modification ?`)) {
+                    handleSubmit(undefined, true)
+                }
+            } else {
+                alert(data?.message || "Une erreur s'est produite lors de l'enregistrement.")
+            }
+        }
     }
 
     // Label helpers for table display

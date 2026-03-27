@@ -4,12 +4,12 @@ namespace App\Http\Controllers\personne;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Http\Models\Assure;
+use App\Models\Assure;
 
 class AssureController extends Controller
 {
     public function create(Request $request){
-        $request->validate([
+        $validatedData =$request->validate([
         'nom' => 'required|string',
         
     ]);
@@ -21,7 +21,7 @@ class AssureController extends Controller
     }
 
     public function update(Request $request){
-        $request->validate([
+        $validatedData =$request->validate([
         'nom' => 'required|string',
         
     ]);

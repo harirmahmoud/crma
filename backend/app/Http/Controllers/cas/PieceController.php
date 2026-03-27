@@ -4,12 +4,12 @@ namespace App\Http\Controllers\cas;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Http\Models\Piece;
+use App\Models\Piece;
 
 class PieceController extends Controller
 {
      public function create(Request $request){
-        $request->validate([
+       $validatedData = $request->validate([
         'nom' => 'required|string',
         'type'=>'required|string',
         'description'=>'required|string',
@@ -25,7 +25,7 @@ class PieceController extends Controller
     }
 
     public function update(Request $request){
-        $request->validate([
+       $validatedData = $request->validate([
         'nom' => 'sometimes|string',
         'type'=>'sometimes|string',
         'description'=>'sometimes|string',
@@ -41,6 +41,17 @@ class PieceController extends Controller
         return response()->json(['message' => 'piece not found'], 404);
     }
     $piece->delete();
+
     return response()->json(['message' => 'piece has been deleted successfully'], 200);
+    }
+     public function getPiece(Request $request){
+    $perPage = $request->get('per_page', 10);
+    $query   = $request->get('q');
+    $piece = Piece::query()
+        ->when($query, function ($q) use ($query) {
+            $q->where('nom', 'like', "%{$query}%");
+        })
+        ->paginate($perPage);
+        return response()->json(['piece' => $piece], 200);
     }
 }

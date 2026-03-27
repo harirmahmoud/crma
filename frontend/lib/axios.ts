@@ -1,5 +1,4 @@
 import axios from "axios"
-import { auth } from "@clerk/nextjs/server"
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api",
@@ -10,15 +9,17 @@ const axiosInstance = axios.create({
 
 // Request interceptor to add auth token
 axiosInstance.interceptors.request.use(
-  async (config) => {
-    // Get the session token from Clerk
-    const { getToken } = await auth()
-    const token = await getToken()
+  (config) => {
+    // If we are in the browser, extracting token from document.cookie
+    if (typeof window !== "undefined") {
+      const tokenMatch = document.cookie.match(/(?:^|; )auth_token=([^;]*)/);
+      const token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null;
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
     }
-
+    // Alternatively for server-side usage, we'd pass token explicitly.
     return config
   },
   (error) => {

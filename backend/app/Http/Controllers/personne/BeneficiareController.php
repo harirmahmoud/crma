@@ -4,17 +4,17 @@ namespace App\Http\Controllers\personne;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Http\Models\Beneficiare;
+use App\Models\Beneficiare;
 
 class BeneficiareController extends Controller
 {
      public function create(Request $request){
-        $request->validate([
+        $validatedData =$request->validate([
         'nom' => 'required|string',
         'prenom'=>'required|string',
         'date_naissance'=>'required|date',
         'lien'=>'required|string',
-        'adherent_id'=>'required|string',
+        'adherent_id'=>'required|integer',
     ]);
     $beneficiare=Beneficiare::create([
         'nom' => $validatedData['nom'],
@@ -28,7 +28,7 @@ class BeneficiareController extends Controller
     }
 
     public function update(Request $request){
-        $request->validate([
+      $validatedData =  $request->validate([
         'nom' => 'sometimes|string',
         'prenom'=>'sometimes|string',
         'date_naissance'=>'sometimes|date',

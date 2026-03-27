@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: crma-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # Update with the actual backend API URL that frontend should hit (usually Nginx)
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+
+  # Laravel Backend (PHP-FPM)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: crma-backend
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=crma
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=secret
+    depends_on:
+      - db
+
+  # Nginx Web Server for Laravel
+  nginx:
+    image: nginx:alpine
+    container_name: crma-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend:/var/www/html
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - backend
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: crma-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=crma
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - crma-db-data:/var/lib/postgresql/data
+
+volumes:
+  crma-db-data:

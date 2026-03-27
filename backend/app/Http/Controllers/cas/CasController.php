@@ -202,4 +202,15 @@ class CasController extends Controller
 
         return response()->json(['message' => 'Cas has been deleted successfully'], 200);
     }
+
+    public function getCas(Request $request){
+    $perPage = $request->get('per_page', 10);
+    $query   = $request->get('q');
+    $cas = Cas::query()
+        ->when($query, function ($q) use ($query) {
+            $q->where('num_quitance', 'like', "%{$query}%");
+        })
+        ->paginate($perPage);
+        return response()->json(['cas' => $cas], 200);
+    }
 }

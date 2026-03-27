@@ -2,13 +2,27 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboardIcon, UserIcon, SettingsIcon, HomeIcon } from "lucide-react"
+import {
+  LayoutDashboardIcon,
+  UserIcon,
+  SettingsIcon,
+  HomeIcon,
+  UsersIcon,
+  UserCheckIcon,
+  HeartHandshakeIcon,
+  ShieldIcon,
+  FileSignatureIcon,
+  BuildingIcon,
+  FileIcon,
+  FolderOpenIcon
+} from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -16,22 +30,82 @@ import {
 } from "@/components/ui/sidebar"
 import { UserNav } from "@/components/user-nav"
 
-const menuItems = [
+const navGroups = [
   {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboardIcon,
+    title: "Général",
+    items: [
+      {
+        title: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboardIcon,
+      },
+      {
+        title: "Profile",
+        href: "/dashboard/profile",
+        icon: UserIcon,
+      },
+      {
+        title: "Settings",
+        href: "/dashboard/settings",
+        icon: SettingsIcon,
+      },
+    ]
   },
   {
-    title: "Profile",
-    href: "/dashboard/profile",
-    icon: UserIcon,
+    title: "Personnes",
+    items: [
+      {
+        title: "Assuré",
+        href: "/dashboard/assure",
+        icon: UsersIcon,
+      },
+      {
+        title: "Adhérent",
+        href: "/dashboard/adherant",
+        icon: UserCheckIcon,
+      },
+      {
+        title: "Bénéficiaire",
+        href: "/dashboard/beneficiaire",
+        icon: HeartHandshakeIcon,
+      },
+    ]
   },
   {
-    title: "Settings",
-    href: "/dashboard/settings",
-    icon: SettingsIcon,
+    title: "Gestion",
+    items: [
+      {
+        title: "Franchise",
+        href: "/dashboard/franchise",
+        icon: ShieldIcon,
+      },
+      {
+        title: "Condition",
+        href: "/dashboard/condition",
+        icon: FileSignatureIcon,
+      },
+      {
+        title: "GrpFranchise",
+        href: "/dashboard/grpfranchise",
+        icon: BuildingIcon,
+      },
+    ]
   },
+  {
+    title: "Dossiers",
+    items: [
+      {
+        title: "Pièce",
+        href: "/dashboard/piece",
+        icon: FileIcon,
+      },
+      {
+        title: "Cas",
+        href: "/dashboard/cas",
+        icon: FolderOpenIcon,
+      },
+    ]
+  }
 ]
 
 export function DashboardSidebar() {
@@ -48,22 +122,25 @@ export function DashboardSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname === item.href}>
-                    <Link href={item.href}>
-                      <item.icon className="size-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {navGroups.map((group) => (
+          <SidebarGroup key={group.title}>
+            <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}>
+                      <Link href={item.href}>
+                        <item.icon className="size-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <UserNav />

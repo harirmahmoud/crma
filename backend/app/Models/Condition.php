@@ -8,7 +8,8 @@ class Condition extends Model
 {
     protected $fillable=[
         
-        'condition'
+        'condition',
+        'nom'
     ];
 
     protected $casts = [

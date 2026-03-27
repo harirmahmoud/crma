@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Cas extends Model
 {
     protected $fillable=[
-        'id',
+        'num_quitance',
         'date',
         'assure_id',
         'adherent_id',

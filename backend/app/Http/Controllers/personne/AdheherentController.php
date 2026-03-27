@@ -4,18 +4,20 @@ namespace App\Http\Controllers\personne;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Http\Models\Adherent;
+use App\Models\Adherent;
 
 class AdheherentController extends Controller
 {
      public function create(Request $request){
-        $request->validate([
+       $validatedData = $request->validate([
+        'id' => 'required|integer',
         'nom' => 'required|string',
         'prenom'=>'required|string',
         'date_naissance'=>'required|date',
 
     ]);
     $adherent=Adherent::create([
+        'id' => $validatedData['id'],
         'nom' => $validatedData['nom'],
         'prenom' => $validatedData['prenom'],
         'date_naissance' => $validatedData['date_naissance'],
@@ -25,7 +27,8 @@ class AdheherentController extends Controller
     }
 
     public function update(Request $request){
-        $request->validate([
+       $validatedData = $request->validate([
+        'id' => 'sometimes|integer',
         'nom' => 'sometimes|string',
         'prenom'=>'sometimes|string',
         'date_naissance'=>'sometimes|date',

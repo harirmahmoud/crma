@@ -4,12 +4,12 @@ namespace App\Http\Controllers\franchise;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Http\Models\Franchise;
+use App\Models\Franchise;
 
 class FranchiseController extends Controller
 {
     public function create(Request $request){
-        $request->validate([
+       $validatedData = $request->validate([
         'nom' => 'required|string',
         'franchise'=>'required|string',
         'grp_franchise_id'=>'required|string',
@@ -27,7 +27,7 @@ class FranchiseController extends Controller
     }
 
     public function update(Request $request){
-        $request->validate([
+       $validatedData = $request->validate([
         'nom' => 'sometimes|string',
         'franchise' => 'sometimes|string',
         'grp_franchise_id' => 'sometimes|string',

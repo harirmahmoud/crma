@@ -28,30 +28,25 @@ export function UserNav() {
     router.push("/login")
   }
 
-  const initials =
-    user.firstName && user.lastName
-      ? `${user.firstName[0]}${user.lastName[0]}`
-      : user.emailAddresses[0]?.emailAddress[0].toUpperCase() || "U"
+  const initials = user.username ? user.username[0].toUpperCase() : "U"
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-full justify-start gap-2 px-2">
           <Avatar className="size-8">
-            <AvatarImage src={user.imageUrl || "/placeholder.svg"} alt={user.fullName || "User"} />
+            <AvatarImage src={"/placeholder.svg"} alt={user.username || "User"} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="flex flex-1 flex-col items-start text-left text-sm">
-            <span className="font-medium">{user.fullName || "User"}</span>
-            <span className="text-xs text-muted-foreground">{user.emailAddresses[0]?.emailAddress}</span>
+            <span className="font-medium">{user.username || "User"}</span>
           </div>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium leading-none">{user.fullName || "User"}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user.emailAddresses[0]?.emailAddress}</p>
+            <p className="text-sm font-medium leading-none">{user.username || "User"}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

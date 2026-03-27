@@ -4,25 +4,27 @@ namespace App\Http\Controllers\franchise;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Http\Models\Condition;
+use App\Models\Condition;
 
 class ConditionController extends Controller
 {
     public function create(Request $request){
-        $request->validate([
+        $validatedData =$request->validate([
+        'nom'=>'required|string',
         'condition'=>'required|array',
-        'condition.max'=>'nullable|number',
-        'condition.plafond'=>'nullable|double',
+        'condition.max'=>'nullable|integer',
+        'condition.plafond'=>'nullable|numeric',
         'condition.dure'=>'nullable|string',
     ]);
     $condition=Condition::create([
+        'nom' => $validatedData['nom'],
         'condition' => $validatedData['condition'],
         
     ]);
 
     return response()->json(['message' => 'condition has been created successfully'], 200);
     }
-       public function updateFarend(Request $request, $id)
+       public function update(Request $request, $id)
 {
     $condition = Condition::find($id);
 
@@ -30,10 +32,11 @@ class ConditionController extends Controller
         return response()->json(['message' => 'condition not found'], 404);
     }
 
-    $validatedData = $request->validate([
+   $validatedData = $validatedData = $request->validate([
+        'nom'=>'sometimes|string',
         'condition'=>'sometimes|array',
-        'condition.max'=>'nullable|number',
-        'condition.plafond'=>'nullable|double',
+        'condition.max'=>'nullable|integer',
+        'condition.plafond'=>'nullable|numeric',
         'condition.dure'=>'nullable|string',
     ]);
 
@@ -67,7 +70,7 @@ public function getConditions(Request $request){
     $query   = $request->get('q');
     $conditions = Condition::query()
         ->when($query, function ($q) use ($query) {
-            $q->where('condition', 'like', "%{$query}%");
+            $q->where('nom', 'like', "%{$query}%");
         })
         ->paginate($perPage);
         return response()->json(['conditions' => $conditions], 200);

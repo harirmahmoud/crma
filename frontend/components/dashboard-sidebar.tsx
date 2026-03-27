@@ -39,11 +39,7 @@ const navGroups = [
         href: "/dashboard",
         icon: LayoutDashboardIcon,
       },
-      {
-        title: "Profile",
-        href: "/dashboard/profile",
-        icon: UserIcon,
-      },
+
       {
         title: "Settings",
         href: "/dashboard/settings",

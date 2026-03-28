@@ -1,4 +1,4 @@
-FROM php:8.3-fpm
+FROM php:8.4-fpm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -27,12 +27,15 @@ WORKDIR /var/www/html
 COPY . /var/www/html
 
 # Install dependencies (only if composer.json exists)
-RUN if [ -f "composer.json" ]; then composer install --no-interaction --prefer-dist --optimize-autoloader; fi
 
-# Adjust permissions for Laravel
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader -vvv
+
+
+# Adjust permissions for Laravel
+
 
 # Expose port 9000 and start php-fpm server
 EXPOSE 9000

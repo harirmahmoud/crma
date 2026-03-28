@@ -26,6 +26,7 @@ interface Franchise {
     id: number
     nom: string
     franchise: number
+    pourcentage:GLfloat
     grp_franchise_id: number
     condition_id: number
 }

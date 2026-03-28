@@ -41,6 +41,16 @@ docker compose exec backend php artisan key:generate
 
 # Run database migrations to create the tables
 docker compose exec backend php artisan migrate --seed
+
+docker exec -it crma-backend php artisan make:seeder UserSeeder
+docker exec -it crma-backend php artisan tinker
+
+
+    \App\Models\User::create([
+        'username' => 'harir',
+        'password' => bcrypt('harir2004'),
+    ]);
+
 ```
 
 ### 5. Access the Application

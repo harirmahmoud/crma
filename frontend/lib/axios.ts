@@ -5,6 +5,7 @@ const axiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  
 })
 
 // Request interceptor to add auth token

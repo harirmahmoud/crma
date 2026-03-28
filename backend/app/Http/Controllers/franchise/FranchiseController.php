@@ -11,7 +11,8 @@ class FranchiseController extends Controller
     public function create(Request $request){
        $validatedData = $request->validate([
         'nom' => 'required|string',
-        'franchise'=>'required|string',
+        'franchise'=>'sometime|string',
+        'pourcentage'=>'sometime|string',
         'grp_franchise_id'=>'required|string',
         'condition_id'=>'required|string',
        
@@ -19,6 +20,7 @@ class FranchiseController extends Controller
     $franchise=Franchise::create([
         'nom' => $validatedData['nom'],
         'franchise' => $validatedData['franchise'],
+        'pourcentage' => $validatedData['pourcentage'],
         'grp_franchise_id' => $validatedData['grp_franchise_id'],
         'condition_id' => $validatedData['condition_id'],
     ]);
@@ -30,6 +32,7 @@ class FranchiseController extends Controller
        $validatedData = $request->validate([
         'nom' => 'sometimes|string',
         'franchise' => 'sometimes|string',
+        'pourcentage'=>'sometime|string',
         'grp_franchise_id' => 'sometimes|string',
         'condition_id' => 'sometimes|string',
         

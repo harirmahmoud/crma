@@ -35,7 +35,7 @@ class PieceController extends Controller
     return response()->json(['message' => 'piece has been updated successfully'], 200);
     }
 
-     public function deleteUser($id){
+     public function delete($id){
          $piece = Piece::where('id', $id )->first();
     if (!$piece) {
         return response()->json(['message' => 'piece not found'], 404);

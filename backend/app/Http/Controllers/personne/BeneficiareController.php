@@ -40,7 +40,7 @@ class BeneficiareController extends Controller
     return response()->json(['message' => 'beneficiare has been updated successfully'], 200);
     }
 
-     public function deleteUser($id){
+     public function delete($id){
          $beneficiare = Beneficiare::where('id', $id )->first();
     if (!$beneficiare) {
         return response()->json(['message' => 'beneficiare not found'], 404);

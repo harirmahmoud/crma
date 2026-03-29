@@ -11,38 +11,53 @@ class FranchiseController extends Controller
     public function create(Request $request){
        $validatedData = $request->validate([
         'nom' => 'required|string',
-        'franchise'=>'sometime|string',
-        'pourcentage'=>'sometime|string',
-        'grp_franchise_id'=>'required|string',
-        'condition_id'=>'required|string',
+        'franchise'=> 'sometimes|nullable|numeric',
+        'pourcentage'=> 'sometimes|nullable|numeric',
+        'grp_franchise_id'=>'required|numeric',
+        'condition_id'=>'required|numeric',
        
     ]);
+    
     $franchise=Franchise::create([
         'nom' => $validatedData['nom'],
-        'franchise' => $validatedData['franchise'],
-        'pourcentage' => $validatedData['pourcentage'],
+        'franchise' => $validatedData['franchise'] ?? 0,
+        'pourcentage' => $validatedData['pourcentage'] ?? 0,
         'grp_franchise_id' => $validatedData['grp_franchise_id'],
         'condition_id' => $validatedData['condition_id'],
     ]);
 
-    return response()->json(['message' => 'franchise has been created successfully'], 200);
+    return response()->json(['message' => 'franchise has been created successfully', 'franchise' => $franchise], 200);
     }
 
-    public function update(Request $request){
+    public function update(Request $request, $id = null){
        $validatedData = $request->validate([
         'nom' => 'sometimes|string',
-        'franchise' => 'sometimes|string',
-        'pourcentage'=>'sometime|string',
-        'grp_franchise_id' => 'sometimes|string',
-        'condition_id' => 'sometimes|string',
-        
+        'franchise' => 'sometimes|nullable|numeric',
+        'pourcentage'=> 'sometimes|nullable|numeric',
+        'grp_franchise_id' => 'sometimes|numeric',
+        'condition_id' => 'sometimes|numeric',
     ]);
-    $franchise=Franchise::update($validatedData);
-
-    return response()->json(['message' => 'franchise has been updated successfully'], 200);
+    
+    $franchiseId = $id ?? $request->id;
+    $franchise = Franchise::find($franchiseId);
+    
+    if (!$franchise) {
+        return response()->json(['message' => 'franchise not found'], 404);
     }
 
-     public function deleteUser($id){
+    // Explicitly handle updating, fallback to 0 if passing a null payload for these fields
+    if ($request->has('franchise')) $franchise->franchise = $validatedData['franchise'] ?? 0;
+    if ($request->has('pourcentage')) $franchise->pourcentage = $validatedData['pourcentage'] ?? 0;
+    if (isset($validatedData['nom'])) $franchise->nom = $validatedData['nom'];
+    if (isset($validatedData['grp_franchise_id'])) $franchise->grp_franchise_id = $validatedData['grp_franchise_id'];
+    if (isset($validatedData['condition_id'])) $franchise->condition_id = $validatedData['condition_id'];
+
+    $franchise->save();
+
+    return response()->json(['message' => 'franchise has been updated successfully', 'franchise' => $franchise], 200);
+    }
+
+     public function delete($id){
          $franchise = Franchise::where('id', $id )->first();
     if (!$franchise) {
         return response()->json(['message' => 'franchise not found'], 404);

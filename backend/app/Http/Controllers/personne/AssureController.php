@@ -32,7 +32,7 @@ class AssureController extends Controller
     return response()->json(['message' => 'assure has been updated successfully'], 200);
     }
 
-     public function deleteUser($id){
+     public function delete($id){
          $assure = Assure::where('id', $id )->first();
     if (!$assure) {
         return response()->json(['message' => 'assure not found'], 404);

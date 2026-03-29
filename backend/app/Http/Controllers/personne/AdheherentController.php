@@ -38,7 +38,7 @@ class AdheherentController extends Controller
     return response()->json(['message' => 'adherent has been updated successfully'], 200);
     }
 
-     public function deleteUser($id){
+     public function delete($id){
          $adherent = Adherent::where('id', $id )->first();
     if (!$adherent) {
         return response()->json(['message' => 'adherent not found'], 404);

@@ -71,9 +71,14 @@ class CasController extends Controller
         if ($statusmax && $reimbursable > 0) {
             if (isset($franchise->franchise) && $franchise->franchise > 0) {
                 $total = $reimbursable - $franchise->franchise;
+            } else if (isset($franchise->pourcentage) && $franchise->pourcentage > 0) {
+                $pourcentage = $franchise->pourcentage;
+                // Franchise percentage is the amount deducted, so company reimburses the rest:
+                $deduction = $reimbursable * ($pourcentage / 100);
+                $total = $reimbursable - $deduction;
             } else {
-                $pourcentage = $franchise->pourcentage ?? 0;
-                $total = $reimbursable * $pourcentage;
+                // If neither franchise value nor percentage is set, assuming full reimbursement
+                $total = $reimbursable;
             }
         }
         $total = max(0, $total);
@@ -191,14 +196,13 @@ class CasController extends Controller
     public function create(Request $request)
     {
         $validatedData = $request->validate([
-            'id' => 'required|string',
+            'num_quitance' => 'required|string',
             'date' => 'required|date',
-            'assure_id' => 'required|string',
-            'adherent_id' => 'required|string',
-            'beneficiare_id' => 'required|string',
+            'assure_id' => 'required|numeric',
+            'beneficiare_id' => 'required|numeric',
             'frais_engage' => 'required|numeric',
-            'franchise_id' => 'required|string',
-            'piece_id' => 'required|string',
+            'franchise_id' => 'required|numeric',
+            'piece_id' => 'required|numeric',
             'force_create' => 'sometimes|boolean',
         ]);
 
@@ -234,14 +238,14 @@ class CasController extends Controller
     public function update(Request $request)
     {
         $validatedData = $request->validate([
-            'id' => 'sometimes|string',
+            'id' => 'sometimes|numeric',
+            'num_quitance' => 'sometimes|string',
             'date' => 'sometimes|date',
-            'assure_id' => 'sometimes|string',
-            'adherent_id' => 'sometimes|string',
-            'beneficiare_id' => 'sometimes|string',
+            'assure_id' => 'sometimes|numeric',
+            'beneficiare_id' => 'sometimes|numeric',
             'frais_engage' => 'sometimes|numeric',
-            'franchise_id' => 'sometimes|string',
-            'piece_id' => 'sometimes|string',
+            'franchise_id' => 'sometimes|numeric',
+            'piece_id' => 'sometimes|numeric',
             'force_create' => 'sometimes|boolean',
         ]);
 

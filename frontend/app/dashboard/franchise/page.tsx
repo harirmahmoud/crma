@@ -25,8 +25,8 @@ import {
 interface Franchise {
     id: number
     nom: string
-    franchise: number
-    pourcentage:GLfloat
+    franchise: number | null
+    pourcentage: number | null
     grp_franchise_id: number
     condition_id: number
 }
@@ -152,7 +152,9 @@ export default function FranchisePage() {
 
     // Form state
     const [nom, setNom] = useState("")
+    const [isPercentage, setIsPercentage] = useState(false)
     const [franchiseVal, setFranchiseVal] = useState("")
+    const [pourcentageVal, setPourcentageVal] = useState("")
     const [grpFranchiseId, setGrpFranchiseId] = useState<number | null>(null)
     const [conditionId, setConditionId] = useState<number | null>(null)
 
@@ -194,7 +196,9 @@ export default function FranchisePage() {
 
     const resetForm = () => {
         setNom("")
+        setIsPercentage(false)
         setFranchiseVal("")
+        setPourcentageVal("")
         setGrpFranchiseId(null)
         setConditionId(null)
     }
@@ -208,7 +212,15 @@ export default function FranchisePage() {
     const handleOpenEdit = (item: Franchise) => {
         setEditingItem(item)
         setNom(item.nom)
-        setFranchiseVal(item.franchise.toString())
+        if (item.pourcentage && item.pourcentage > 0) {
+            setIsPercentage(true)
+            setPourcentageVal(item.pourcentage.toString())
+            setFranchiseVal("")
+        } else {
+            setIsPercentage(false)
+            setFranchiseVal(item.franchise?.toString() || "")
+            setPourcentageVal("")
+        }
         setGrpFranchiseId(item.grp_franchise_id)
         setConditionId(item.condition_id)
         setIsDialogOpen(true)
@@ -228,9 +240,11 @@ export default function FranchisePage() {
         e.preventDefault()
         if (!grpFranchiseId) { alert("Veuillez sélectionner un groupe de franchise."); return }
         if (!conditionId) { alert("Veuillez sélectionner une condition."); return }
+
         const payload = {
             nom,
-            franchise: parseFloat(franchiseVal),
+            franchise: isPercentage ? null : parseFloat(franchiseVal || "0"),
+            pourcentage: isPercentage ? parseFloat(pourcentageVal || "0") : null,
             grp_franchise_id: grpFranchiseId,
             condition_id: conditionId,
         }
@@ -275,7 +289,8 @@ export default function FranchisePage() {
                         <TableRow>
                             <TableHead>ID</TableHead>
                             <TableHead>Nom</TableHead>
-                            <TableHead>Franchise</TableHead>
+                            <TableHead>Valeur</TableHead>
+                            <TableHead>Type</TableHead>
                             <TableHead>Groupe</TableHead>
                             <TableHead>Condition</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
@@ -295,7 +310,14 @@ export default function FranchisePage() {
                                 <TableRow key={item.id}>
                                     <TableCell>{item.id}</TableCell>
                                     <TableCell>{item.nom}</TableCell>
-                                    <TableCell>{item.franchise}</TableCell>
+                                    <TableCell>
+                                        {item.pourcentage ? `${item.pourcentage}%` : `${item.franchise} DA`}
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.pourcentage ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                            {item.pourcentage ? 'Pourcentage' : 'Valeur Fixe'}
+                                        </span>
+                                    </TableCell>
                                     <TableCell>{getLabel(grpFranchises, item.grp_franchise_id)}</TableCell>
                                     <TableCell>{getLabel(conditions, item.condition_id)}</TableCell>
                                     <TableCell className="text-right">
@@ -323,16 +345,56 @@ export default function FranchisePage() {
                             <Label htmlFor="nom">Nom</Label>
                             <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="franchiseVal">Franchise (Valeur)</Label>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                id="franchiseVal"
-                                value={franchiseVal}
-                                onChange={(e) => setFranchiseVal(e.target.value)}
-                                required
-                            />
+
+                        <div className="space-y-3 p-3 border rounded-md bg-muted/30">
+                            <Label>Type de Retenue</Label>
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    variant={!isPercentage ? "default" : "outline"}
+                                    onClick={() => setIsPercentage(false)}
+                                    className="flex-1"
+                                >
+                                    Valeur Fixe
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant={isPercentage ? "default" : "outline"}
+                                    onClick={() => setIsPercentage(true)}
+                                    className="flex-1"
+                                >
+                                    Pourcentage
+                                </Button>
+                            </div>
+
+                            {!isPercentage ? (
+                                <div className="space-y-2 mt-4">
+                                    <Label htmlFor="franchiseVal">Montant de la Franchise (DA)</Label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        id="franchiseVal"
+                                        value={franchiseVal}
+                                        onChange={(e) => setFranchiseVal(e.target.value)}
+                                        required={!isPercentage}
+                                        placeholder="Ex: 2000"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="space-y-2 mt-4">
+                                    <Label htmlFor="pourcentageVal">Pourcentage (%)</Label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        max="100"
+                                        id="pourcentageVal"
+                                        value={pourcentageVal}
+                                        onChange={(e) => setPourcentageVal(e.target.value)}
+                                        required={isPercentage}
+                                        placeholder="Ex: 20"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <AutocompleteField

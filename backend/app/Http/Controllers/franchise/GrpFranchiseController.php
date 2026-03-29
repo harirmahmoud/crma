@@ -32,7 +32,7 @@ class GrpFranchiseController extends Controller
     return response()->json(['message' => 'grpFranchise has been updated successfully'], 200);
     }
 
-     public function deleteUser($id){
+     public function delete($id){
          $grpFranchise = GrpFranchise::where('id', $id )->first();
     if (!$grpFranchise) {
         return response()->json(['message' => 'grpFranchise not found'], 404);

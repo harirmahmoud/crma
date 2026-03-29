@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CondBeneficiare extends Model
 {
+    protected $table = 'cond_beneficiare';
+
      protected $fillable=[
         "id",
     "condition_id",

@@ -24,6 +24,7 @@ interface Cas {
     franchise_id: number
     piece_id: number
     frais_engage: number
+    total:number
 }
 interface Assure { id: number; nom: string }
 interface Adherent { id: number; nom: string; prenom: string }
@@ -297,7 +298,6 @@ export default function CasPage() {
         if (!assureId) { alert("Veuillez sélectionner un assuré."); return }
         if (!beneficiaireId) { alert("Veuillez sélectionner un bénéficiaire."); return }
         if (!franchiseId) { alert("Veuillez sélectionner une franchise."); return }
-        if (!pieceId) { alert("Veuillez sélectionner une pièce."); return }
 
         const payload = {
             num_quitance: numQuitance, date: dateVal,
@@ -360,6 +360,7 @@ export default function CasPage() {
                             <TableHead>Franchise</TableHead>
                             <TableHead>Pièce</TableHead>
                             <TableHead>Frais Engagés</TableHead>
+                            <TableHead>Total</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -377,6 +378,7 @@ export default function CasPage() {
                                 <TableCell>{lblFranchise(item.franchise_id)}</TableCell>
                                 <TableCell>{lblPiece(item.piece_id)}</TableCell>
                                 <TableCell>{item.frais_engage}</TableCell>
+                                <TableCell>{item.total}</TableCell>
                                 <TableCell className="text-right">
                                     <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(item)}>
                                         <Edit className="h-4 w-4" />

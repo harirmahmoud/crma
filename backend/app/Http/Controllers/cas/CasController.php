@@ -11,110 +11,110 @@ use App\Models\Condition;
 
 class CasController extends Controller
 {
-    private function calculateTotalAndHandleCondition($validatedData)
+    /**
+     * Compute the real accumulated frais_engage from actual Cas records.
+     * exclude_cas_id: when updating a cas, exclude it so we don't count it twice.
+     */
+    private function getAccumulatedFrais($beneficiare_id, $condition_id, $dure, $exclude_num_quitance = null)
     {
-        $franchise = Franchise::where('franchise_id', $validatedData['franchise_id'])->first();
+        $query = Cas::join('franchises', 'cas.franchise_id', '=', 'franchises.id')
+            ->where('cas.beneficiare_id', $beneficiare_id)
+            ->where('franchises.condition_id', $condition_id);
+
+        if ($exclude_num_quitance) {
+            $query->where('cas.num_quitance', '!=', $exclude_num_quitance);
+        }
+
+        // Filter by period
+        if ($dure === 'mois') {
+            $query->whereYear('cas.created_at', now()->year)
+                  ->whereMonth('cas.created_at', now()->month);
+        } elseif ($dure === 'anne') {
+            $query->whereYear('cas.created_at', now()->year);
+        }
+
+        return (float) $query->sum('cas.frais_engage');
+    }
+
+    private function calculateTotalAndHandleCondition($validatedData, $exclude_num_quitance = null)
+    {
+        $franchise = Franchise::where('id', $validatedData['franchise_id'])->first();
         $condition_id = $franchise->condition_id ?? null;
         $condition = $condition_id ? Condition::where('id', $condition_id)->first() : null;
-        
-        $condBeneficiaire = null;
-        if ($condition_id) {
-            $condBeneficiaire = CondBeneficiare::where('beneficiare_id', $validatedData['beneficiare_id'])
-                ->where('condition_id', $condition_id)
-                ->first();
-        }
 
         $statusmax = true;
         $statusplafond = true;
-        
-        $now = now()->format('m-Y');
-        
-        if ($condBeneficiaire && $condition) {
-            $cond = $condBeneficiaire->condition;
-            if (!isset($cond['date'])) $cond['date'] = $now;
-            
-            [$monthnow, $yearnow] = explode('-', $now);
-            $dateParts = explode('-', $cond['date']);
-            $month = $dateParts[0] ?? $monthnow;
-            $year = $dateParts[1] ?? $yearnow;
-            
-            $dure = $condition->condition['dure'] ?? '';
-            if (($dure == "anne" && $year != $yearnow) || ($dure == "mois" && $month != $monthnow)) {
-                $cond['date'] = $now;
-                $cond['plafond'] = 0;
-                $cond['max'] = 0;
-            }
-            
-            $condBeneficiaire->condition = $cond;
-        }
 
-        $accumulatedMax = $condBeneficiaire ? ($condBeneficiaire->condition['max'] ?? 0) : 0;
-        $accumulatedPlafond = $condBeneficiaire ? ($condBeneficiaire->condition['plafond'] ?? 0) : 0;
+        $dure = $condition ? ($condition->condition['dure'] ?? '') : '';
+        $limitMax = $condition ? ($condition->condition['max'] ?? null) : null;
+        $limitPlafond = $condition ? ($condition->condition['plafond'] ?? null) : null;
+
+        // Compute accumulated frais from actual Cas records (no stored state)
+        $accumulatedFrais = $condition_id
+            ? $this->getAccumulatedFrais($validatedData['beneficiare_id'], $condition_id, $dure, $exclude_num_quitance)
+            : 0;
+
+        $accumulatedCount = $condition_id
+            ? Cas::join('franchises', 'cas.franchise_id', '=', 'franchises.id')
+                ->where('cas.beneficiare_id', $validatedData['beneficiare_id'])
+                ->where('franchises.condition_id', $condition_id)
+                ->when($exclude_num_quitance, fn($q) => $q->where('cas.num_quitance', '!=', $exclude_num_quitance))
+                ->when($dure === 'mois', fn($q) => $q->whereYear('cas.created_at', now()->year)->whereMonth('cas.created_at', now()->month))
+                ->when($dure === 'anne', fn($q) => $q->whereYear('cas.created_at', now()->year))
+                ->count()
+            : 0;
 
         // Check max
-        if ($condition && isset($condition->condition['max'])) {
-            if ($accumulatedMax + 1 > $condition->condition['max']) {
-                $statusmax = false;
-            }
+        if ($limitMax !== null && ($accumulatedCount + 1) > $limitMax) {
+            $statusmax = false;
         }
 
-        // Check plafond
+        // Check plafond and compute reimbursable
         $reimbursable = (float) $validatedData['frais_engage'];
-        if ($condition && isset($condition->condition['plafond'])) {
-            if ($accumulatedPlafond + $validatedData['frais_engage'] > $condition->condition['plafond']) {
+        if ($limitPlafond !== null) {
+            if ($accumulatedFrais + $validatedData['frais_engage'] > $limitPlafond) {
                 $statusplafond = false;
-                $reimbursable = max(0, $condition->condition['plafond'] - $accumulatedPlafond);
+                $reimbursable = max(0, $limitPlafond - $accumulatedFrais);
             }
         }
 
+        // Apply franchise deduction
         $total = 0;
-        if ($statusmax && $reimbursable > 0) {
+        if ($reimbursable > 0) {
             if (isset($franchise->franchise) && $franchise->franchise > 0) {
-                $total = $reimbursable - $franchise->franchise;
-            } else if (isset($franchise->pourcentage) && $franchise->pourcentage > 0) {
-                $pourcentage = $franchise->pourcentage;
-                // Franchise percentage is the amount deducted, so company reimburses the rest:
-                $deduction = $reimbursable * ($pourcentage / 100);
-                $total = $reimbursable - $deduction;
+                $total = max(0, $reimbursable - $franchise->franchise);
+            } elseif (isset($franchise->pourcentage) && $franchise->pourcentage > 0) {
+                $total = max(0, $reimbursable - ($reimbursable * ($franchise->pourcentage / 100)));
             } else {
-                // If neither franchise value nor percentage is set, assuming full reimbursement
                 $total = $reimbursable;
             }
         }
-        $total = max(0, $total);
 
-        // Save CondBeneficiaire changes
+        // Update condBeneficiaire as a lightweight tracking record (not used for accumulation)
         if ($condition_id) {
-            if ($condBeneficiaire) {
-                $cond = $condBeneficiaire->condition;
-                $cond['max'] = $accumulatedMax + 1;
-                $cond['plafond'] = $accumulatedPlafond + $validatedData['frais_engage'];
-                $condBeneficiaire->condition = $cond;
-                $condBeneficiaire->save();
-            } else {
-                CondBeneficiare::create([
-                    'condition_id'   => $condition_id,
-                    'beneficiare_id' => $validatedData['beneficiare_id'],
-                    'status'         => true,
-                    'condition'      => [
-                        'max' => 1,
-                        'plafond' => $validatedData['frais_engage'],
-                        'date' => $now,
-                    ],
-                ]);
-            }
+            $condBeneficiaire = CondBeneficiare::firstOrNew([
+                'beneficiare_id' => $validatedData['beneficiare_id'],
+                'condition_id'   => $condition_id,
+            ]);
+            $condBeneficiaire->status = $statusmax && $statusplafond;
+            $condBeneficiaire->condition = [
+                'max'    => $accumulatedCount + 1,
+                'plafond' => $accumulatedFrais + $validatedData['frais_engage'],
+                'date'   => now()->format('m-Y'),
+            ];
+            $condBeneficiaire->save();
         }
 
         return [
-            'total' => $total,
-            'statusmax' => $statusmax,
-            'statusplafond' => $statusplafond
+            'total'         => max(0, $total),
+            'statusmax'     => $statusmax,
+            'statusplafond' => $statusplafond,
         ];
     }
 
     private function reverseCondition($cas)
     {
-        $franchise = Franchise::where('franchise_id', $cas->franchise_id)->first();
+        $franchise = Franchise::where('id', $cas->franchise_id)->first();
         if (!$franchise || !$franchise->condition_id) return;
         
         $condBeneficiaire = CondBeneficiare::where('beneficiare_id', $cas->beneficiare_id)
@@ -134,63 +134,49 @@ class CasController extends Controller
         }
     }
 
-    private function checkStatusMaxAndPlafond($validatedData)
+    private function checkStatusMaxAndPlafond($validatedData, $exclude_num_quitance = null)
     {
-        $franchise = Franchise::where('franchise_id', $validatedData['franchise_id'])->first();
+        $franchise = Franchise::where('id', $validatedData['franchise_id'])->first();
         if (!$franchise || !$franchise->condition_id) {
             return ['statusmax' => true, 'statusplafond' => true];
         }
 
         $condition = Condition::where('id', $franchise->condition_id)->first();
-        $condBeneficiaire = CondBeneficiare::where('beneficiare_id', $validatedData['beneficiare_id'])
-            ->where('condition_id', $franchise->condition_id)
-            ->first();
+        if (!$condition) {
+            return ['statusmax' => true, 'statusplafond' => true];
+        }
+
+        $dure = $condition->condition['dure'] ?? '';
+        $limitMax = $condition->condition['max'] ?? null;
+        $limitPlafond = $condition->condition['plafond'] ?? null;
+
+        $accumulatedFrais = $this->getAccumulatedFrais(
+            $validatedData['beneficiare_id'],
+            $franchise->condition_id,
+            $dure,
+            $exclude_num_quitance
+        );
+
+        $accumulatedCount = Cas::join('franchises', 'cas.franchise_id', '=', 'franchises.id')
+            ->where('cas.beneficiare_id', $validatedData['beneficiare_id'])
+            ->where('franchises.condition_id', $franchise->condition_id)
+            ->when($exclude_num_quitance, fn($q) => $q->where('cas.num_quitance', '!=', $exclude_num_quitance))
+            ->when($dure === 'mois', fn($q) => $q->whereYear('cas.created_at', now()->year)->whereMonth('cas.created_at', now()->month))
+            ->when($dure === 'anne', fn($q) => $q->whereYear('cas.created_at', now()->year))
+            ->count();
 
         $statusmax = true;
         $statusplafond = true;
-        
-        $now = now()->format('m-Y');
-        $accumulatedMax = 0;
-        $accumulatedPlafond = 0;
 
-        if ($condBeneficiaire && $condition) {
-            $cond = $condBeneficiaire->condition;
-            if (!isset($cond['date'])) $cond['date'] = $now;
-            
-            [$monthnow, $yearnow] = explode('-', $now);
-            $dateParts = explode('-', $cond['date']);
-            $month = $dateParts[0] ?? $monthnow;
-            $year = $dateParts[1] ?? $yearnow;
-            
-            $dure = $condition->condition['dure'] ?? '';
-            if (($dure == "anne" && $year != $yearnow) || ($dure == "mois" && $month != $monthnow)) {
-                // reset counters if period has passed
-                $accumulatedMax = 0;
-                $accumulatedPlafond = 0;
-            } else {
-                $accumulatedMax = $cond['max'] ?? 0;
-                $accumulatedPlafond = $cond['plafond'] ?? 0;
-            }
+        if ($limitMax !== null && ($accumulatedCount + 1) > $limitMax) {
+            $statusmax = false;
         }
 
-        // Check max
-        if ($condition && isset($condition->condition['max'])) {
-            if ($accumulatedMax + 1 > $condition->condition['max']) {
-                $statusmax = false;
-            }
+        if ($limitPlafond !== null && ($accumulatedFrais + $validatedData['frais_engage']) > $limitPlafond) {
+            $statusplafond = false;
         }
 
-        // Check plafond
-        if ($condition && isset($condition->condition['plafond'])) {
-            if ($accumulatedPlafond + $validatedData['frais_engage'] > $condition->condition['plafond']) {
-                $statusplafond = false;
-            }
-        }
-
-        return [
-            'statusmax' => $statusmax,
-            'statusplafond' => $statusplafond
-        ];
+        return ['statusmax' => $statusmax, 'statusplafond' => $statusplafond];
     }
 
     public function create(Request $request)
@@ -202,7 +188,7 @@ class CasController extends Controller
             'beneficiare_id' => 'required|numeric',
             'frais_engage' => 'required|numeric',
             'franchise_id' => 'required|numeric',
-            'piece_id' => 'required|numeric',
+            'piece_id' => 'sometimes|nullable|numeric',
             'force_create' => 'sometimes|boolean',
         ]);
 
@@ -238,37 +224,32 @@ class CasController extends Controller
     public function update(Request $request)
     {
         $validatedData = $request->validate([
-            'id' => 'sometimes|numeric',
             'num_quitance' => 'sometimes|string',
             'date' => 'sometimes|date',
             'assure_id' => 'sometimes|numeric',
             'beneficiare_id' => 'sometimes|numeric',
             'frais_engage' => 'sometimes|numeric',
             'franchise_id' => 'sometimes|numeric',
-            'piece_id' => 'sometimes|numeric',
+            'piece_id' => 'sometimes|nullable|numeric',
             'force_create' => 'sometimes|boolean',
         ]);
 
-        $casId = $validatedData['id'] ?? $request->id;
-        $cas = Cas::where('id', $casId)->first();
+        // Look up by route parameter
+        $casId = $request->route('id');
+        $cas = Cas::where('num_quitance', $casId)->first();
         
         if (!$cas) {
             return response()->json(['message' => 'Cas not found'], 404);
         }
 
-        // Validate max and plafond before update (treating as new entry temporarily)
-        $newDataForCheck = array_merge($cas->toArray(), $validatedData);
-        
-        // Temporarily reverse to check if new data fits
-        $this->reverseCondition($cas);
+        // Merge new data over the existing Cas
+        $newData = array_merge($cas->toArray(), $validatedData);
 
-        $check = $this->checkStatusMaxAndPlafond($newDataForCheck);
+        // Check limits — exclude this Cas from accumulated count since we're replacing it
+        $check = $this->checkStatusMaxAndPlafond($newData, $casId);
         $forceCreate = $request->input('force_create', false);
 
-        if (!$forceCreate && (!$check['statusmax'] || !$check['statusplafond'])) {
-            // Re-apply original since we reversed
-            $calculated = $this->calculateTotalAndHandleCondition($cas->toArray());
-            
+        if (!$forceCreate) {
             if (!$check['statusmax']) {
                 return response()->json([
                     'message' => 'Le nombre maximum de cas a été atteint.',
@@ -283,19 +264,21 @@ class CasController extends Controller
             }
         }
 
-        $calculated = $this->calculateTotalAndHandleCondition($newDataForCheck);
+        // Calculate new total — also exclude this Cas from accumulation
+        $calculated = $this->calculateTotalAndHandleCondition($newData, $casId);
 
-        $validatedData['total'] = $calculated['total'];
-        $validatedData['status'] = $calculated['statusmax'] && $calculated['statusplafond'];
+        $updatePayload = collect($validatedData)->except('force_create')->toArray();
+        $updatePayload['total'] = $calculated['total'];
+        $updatePayload['status'] = $calculated['statusmax'] && $calculated['statusplafond'];
 
-        $cas->update($validatedData);
+        $cas->update($updatePayload);
 
         return response()->json(['message' => 'Cas has been updated successfully', 'cas' => $cas], 200);
     }
 
     public function delete($id)
     {
-        $cas = Cas::where('id', $id)->first();
+        $cas = Cas::where('num_quitance', $id)->first();
         
         if (!$cas) {
             return response()->json(['message' => 'Cas not found'], 404);

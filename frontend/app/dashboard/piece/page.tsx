@@ -184,11 +184,11 @@ export default function PiecePage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="nom">Nom</Label>
-                            <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
+                            <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="description">Description</Label>
-                            <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} required />
+                            <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
                         </div>
                         <DialogFooter>
                             <Button type="submit">Enregistrer</Button>

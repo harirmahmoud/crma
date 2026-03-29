@@ -100,7 +100,7 @@ export default function AdherantPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        const payload = { id: num, nom, prenom, date_naissance: dateNaissance }
+        const payload = { num: num, nom, prenom, date_naissance: dateNaissance }
         try {
             if (editingItem) {
                 await axiosInstance.put(`/adherent/${editingItem.id}`, payload)

@@ -10,6 +10,6 @@ class Adherent extends Model
         'nom',
         'prenom',
         'date_naissance',
-        
+        'num'
     ];
 }

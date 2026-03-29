@@ -48,6 +48,8 @@ const navGroups = [
     ]
   },
   {
+
+
     title: "Personnes",
     items: [
       {
@@ -71,9 +73,9 @@ const navGroups = [
     title: "Gestion",
     items: [
       {
-        title: "Franchise",
-        href: "/dashboard/franchise",
-        icon: ShieldIcon,
+        title: "GrpFranchise",
+        href: "/dashboard/grpfranchise",
+        icon: BuildingIcon,
       },
       {
         title: "Condition",
@@ -81,10 +83,12 @@ const navGroups = [
         icon: FileSignatureIcon,
       },
       {
-        title: "GrpFranchise",
-        href: "/dashboard/grpfranchise",
-        icon: BuildingIcon,
+        title: "Franchise",
+        href: "/dashboard/franchise",
+        icon: ShieldIcon,
       },
+
+
     ]
   },
   {

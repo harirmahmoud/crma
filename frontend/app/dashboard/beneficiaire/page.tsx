@@ -266,19 +266,6 @@ export default function BeneficiairePage() {
                         <DialogTitle>{editingItem ? "Modifier Bénéficiaire" : "Ajouter Bénéficiaire"}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="nom">Nom</Label>
-                            <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="prenom">Prénom</Label>
-                            <Input id="prenom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="dateNaissance">Date de Naissance</Label>
-                            <Input type="date" id="dateNaissance" value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)} required />
-                        </div>
-
                         {/* Adherent autocomplete */}
                         <div className="space-y-2">
                             <Label htmlFor="adherentSearch">Adhérent</Label>
@@ -330,10 +317,35 @@ export default function BeneficiairePage() {
                                 </p>
                             )}
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="nom">Nom</Label>
+                            <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="prenom">Prénom</Label>
+                            <Input id="prenom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="dateNaissance">Date de Naissance</Label>
+                            <Input type="date" id="dateNaissance" value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)} required />
+                        </div>
+
+
 
                         <div className="space-y-2">
                             <Label htmlFor="lien">Lien</Label>
-                            <Input id="lien" value={lien} onChange={(e) => setLien(e.target.value)} required />
+                            <select
+                                id="lien"
+                                value={lien}
+                                onChange={(e) => setLien(e.target.value)}
+                                required
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="" disabled>Sélectionner un lien</option>
+                                <option value="Descendant">Descendant</option>
+                                <option value="Ascendant">Ascendant</option>
+                                <option value="Conjoint">Conjoint</option>
+                            </select>
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Annuler</Button>

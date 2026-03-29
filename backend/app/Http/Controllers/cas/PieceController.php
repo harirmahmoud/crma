@@ -10,29 +10,34 @@ class PieceController extends Controller
 {
      public function create(Request $request){
        $validatedData = $request->validate([
-        'nom' => 'required|string',
+        'nom' => 'sometimes|nullable|string',
         'type'=>'required|string',
-        'description'=>'required|string',
+        'description'=>'sometimes|nullable|string',
     ]);
     $piece=Piece::create([
-        'nom' => $validatedData['nom'],
+        'nom' => $validatedData['nom'] ?? null,
         'type' => $validatedData['type'],
-        'decription' => $validatedData['decription'],
+        'description' => $validatedData['description'] ?? null,
         
     ]);
 
-    return response()->json(['message' => 'piece has been created successfully'], 200);
+    return response()->json(['message' => 'piece has been created successfully', 'piece' => $piece], 200);
     }
 
-    public function update(Request $request){
+    public function update(Request $request, $id = null){
        $validatedData = $request->validate([
-        'nom' => 'sometimes|string',
+        'nom' => 'sometimes|nullable|string',
         'type'=>'sometimes|string',
-        'description'=>'sometimes|string',
+        'description'=>'sometimes|nullable|string',
     ]);
-    $piece=Piece::update($validatedData);
+    
+    $pieceId = $id ?? $request->id;
+    $piece = Piece::find($pieceId);
+    if (!$piece) return response()->json(['message' => 'piece not found'], 404);
+    
+    $piece->update($validatedData);
 
-    return response()->json(['message' => 'piece has been updated successfully'], 200);
+    return response()->json(['message' => 'piece has been updated successfully', 'piece' => $piece], 200);
     }
 
      public function delete($id){

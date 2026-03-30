@@ -64,10 +64,7 @@ class CasController extends Controller
                 ->count()
             : 0;
 
-        // Check max
-        if ($limitMax !== null && ($accumulatedCount + 1) > $limitMax) {
-            $statusmax = false;
-        }
+        
 
         // Check plafond and compute reimbursable
         $reimbursable = (float) $validatedData['frais_engage'];
@@ -88,6 +85,12 @@ class CasController extends Controller
             } else {
                 $total = $reimbursable;
             }
+        }
+
+        // Check max
+        if ($limitMax !== null && ($accumulatedCount + 1) > $limitMax) {
+            $statusmax = false;
+            $total=0;
         }
 
         // Update condBeneficiaire as a lightweight tracking record (not used for accumulation)
@@ -182,7 +185,7 @@ class CasController extends Controller
     public function create(Request $request)
     {
         $validatedData = $request->validate([
-            'num_quitance' => 'required|string',
+            
             'date' => 'required|date',
             'assure_id' => 'required|numeric',
             'beneficiare_id' => 'required|numeric',
@@ -212,9 +215,14 @@ class CasController extends Controller
 
         $calculated = $this->calculateTotalAndHandleCondition($validatedData);
 
+        
+        $num = Cas::whereYear('date', now()->year)->count();
+        $num_quitance = $num + 1 . '/' . now()->year;
+
         $casData = collect($validatedData)->except('force_create')->toArray();
         $casData['total'] = $calculated['total'];
         $casData['status'] = $calculated['statusmax'] && $calculated['statusplafond'];
+        $casData['num_quitance'] = $num_quitance;
 
         $cas = Cas::create($casData);
 
